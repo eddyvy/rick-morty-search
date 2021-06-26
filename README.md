@@ -1,70 +1,306 @@
-# Getting Started with Create React App
+# Rick and Morty Search Info
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Introduction
 
-## Available Scripts
+This is a React App using the [Rick and Morty API](https://rickandmortyapi.com/documentation/) to practise what I have learned about React.
 
-In the project directory, you can run:
+It consists in a display of the information and a searching bar to find what any info appearing there.
 
-### `yarn start`
+## Commands
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Install Dependencies
+```
+npm i
+```
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+Start development mode
+```
+npm start
+```
 
-### `yarn test`
+Build the app
+```
+npm run build
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Dependencies
 
-### `yarn build`
+```
+npx create-react-app
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+npm i axios
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Bootstrap
 
-### `yarn eject`
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## Code explanation
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### RickMortyApp.js
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+```javascript
+export const CharactersContext = React.createContext()
 
-## Learn More
+export const RickMortyApp = () => {
+    const [characters, setCharacters] = useState(null)
+    const [charsFiltered, setCharsFiltered] = useState(null)
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+    useEffect(() => {
+        const getCharacters = async() => {
+            const characters = await getAllCharacters()
+            setCharacters( characters )
+        }
+        getCharacters()
+    }, [setCharacters])
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+    useEffect(() => {
+        setCharsFiltered(characters)
+    }, [setCharsFiltered, characters])
 
-### Code Splitting
+    return (
+        <CharactersContext.Provider value={ characters } >
+            <main className="d-flex flex-column align-items-center pb-5" >
+                <SearchBar setCharsFiltered={ setCharsFiltered }  />
+                <MultipleCards charsFiltered={ charsFiltered } />
+            </main>
+        </CharactersContext.Provider>
+    )
+}
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```
 
-### Analyzing the Bundle Size
+A context is created which will be set with an array with all characters data got with the helper `getAllCharacters`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+This values, as a context, can be used by the rest of the components of the application (with exception of index.js).
 
-### Making a Progressive Web App
+This are passed by the characters state.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+The values shown ate the screen are the filtered characters, which are modified by the search component and used by the multiplecards component.
 
-### Advanced Configuration
+The first useEffect sets all the characters to our context value and the second useEffect passes them to filtered values
+when loaded for the first view with all cards.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
 
-### Deployment
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### getAllCharacters.js
 
-### `yarn build` fails to minify
+```javascript
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+export const getAllCharacters = async () => {
+    const API_URL = 'https://rickandmortyapi.com/api/character'
+
+    try {
+        const { data } = await axios.get(API_URL)
+        const numOfCharacters = data.info.count
+        
+        const gettingCharactersOneByOne = async() => {
+            const chars = []
+            for (let i = 0; i < numOfCharacters; i++) {
+                const addingCharacter = await axios.get(`${API_URL}/${i + 1}`)
+                chars.push( addingCharacter )
+            }
+            return chars
+        }
+
+        const characters = await gettingCharactersOneByOne()
+        return characters
+
+    } catch (error) {
+        console.log('Error fetching data', error)
+        return []
+    }
+
+}
+
+```
+
+Autodescriptive function that returns all characters array thanks to axios.
+
+After the GET it keeps the total number of characters at `const numOfCharacters = data.info.count`.
+
+This number is used for the loop at `gettingCharactersOneByOne` so it gets the array with all characters.
+
+Inside the loop there is another GET request to the API for every character.
+
+
+
+### MultipleCard.js
+
+```javascript
+export const MultipleCards = ({ charsFiltered }) => {
+
+    const interval = 25
+    const [charsWanted, setCharsWanted] = useState(interval)
+    const characters = charsFiltered
+
+    const handleClick = () => {
+        setCharsWanted( charsWanted + interval )
+    }
+
+    return (
+        <>
+            <div className="d-flex flex-wrap justify-content-center m-3 mb-5">
+                {
+                    ( !characters ) && <Loading />
+                }
+                {
+                    ( characters )
+                    &&(
+                        ( characters.length === 0 ) && <h3 className="mt-5">Could not find any match :(</h3>
+                    )
+                }
+                { 
+                    ( characters )
+                    &&(
+                        ( characters.length > 0 )
+                        && (
+                            characters.map( (char, index) => ( (index < charsWanted) && ( <Card key={ char.data.id } id={ char.data.id } /> ) ))
+                        )
+                    )
+                }
+            </div>
+            { 
+                ( characters )
+                &&(
+                    ( characters.length > 0 )
+                    && (
+                        <button
+                            type="button"
+                            className="btn btn-primary mb-5"
+                            onClick={ handleClick }
+                        >
+                            Load { interval } more
+                        </button>
+                    )
+                )
+            }
+        </>
+    )
+}
+```
+
+The interval and the charsWanted state are the max number of cards shown and the state adds another interval when the button "load more" is pressed.
+
+With the condition `(index < charsWanted)` at the array map we get the no more than this max number.
+
+The characters are the filtered passed through RickMortyApp.
+
+If the characters are null (as the initial state) it will show the component Loading because it didnt change jet this initial state.
+
+Once characters are loadede it will show all cards with the map function.
+
+After first load the characters constant is not null again but can be an empty array if no matches are found, so it will display a message.
+
+
+### Card.js
+
+```javascript
+
+    export const Card = ({ id }) => {
+
+    const characters = useContext(CharactersContext)
+    
+    const character = characters[ id - 1 ].data
+    
+    const {
+        gender,
+        image,
+        location,
+        name,
+        origin,
+        species,
+        status,
+        type
+    } = character
+
+    return (
+        // card jsx
+    )
+}
+
+```
+
+It gets the character receiving the id.
+
+It gets all characters array through useContext.
+
+The character wanted at the array is at position `id - 1` because the array starts at 0 and the ids at 1.
+
+All character data is destructured and used at the jsx return.
+
+At the jsx a condition to show an image is added, it will display an image next to the character status
+(green = alive, red = dead, grey = unknown).
+
+
+
+### SearchBar.js
+
+```javascript
+
+export const SearchBar = ({ setCharsFiltered }) => {
+
+    const characters = useContext(CharactersContext)
+
+    const findCharsMatching = (str) => {
+        const strWanted = str.trim().toLowerCase()
+        
+        const charsMatching = characters.filter( character => {
+            const char = character.data
+
+            const charValues = Object.values(char).map( value => value.toString().trim().toLowerCase() )
+            for (let i = 0; i < 6; i++) {
+                charValues.pop()
+            }
+            charValues.push(char.location.name.trim().toLowerCase())
+            charValues.push(char.origin.name.trim().toLowerCase())
+
+            if (charValues.find( value => value.includes(strWanted))) {
+                return char
+            }
+
+            return null
+
+        } )
+
+        setCharsFiltered( charsMatching )
+
+    }
+
+    const handleSubmit = (e) => {
+        e.preventDefault()
+        const searchingStr = e.target[0].value
+
+        findCharsMatching(searchingStr)
+    }
+
+    return (
+        // form jsx
+    )
+}
+
+```
+
+It gets the setCharsFiltered from parent RickMortyApp and all characters through useContext.
+
+When the submit is done, the `handleSubmit` function sends the string written to the function `findCharsMatching`.
+
+This function first uses trim() and lowerCase() to our string and then filters all the characters to `charsMatching` constant.
+
+The filter transforms the object gotten to an array of values through `Object.values(char)` and map them to get the values
+in `charValues` ( trim() and loweCase() used ).
+
+Then the 6 last values are popped because we dont want them to be taken into account (url, date of creation...).
+
+In these 6 values are included location and origin because they are saved as "[object object]" strings.
+
+As we want these values we push them from the initial character item, as we only want the name.
+( `charValues.push(char.location.name.trim().toLowerCase())` )
+
+If the string we are searching is included in any of these values (which correspond to name, location.name, gender ...)
+it will return the character complete.
+
+After all filter it will set at our filtered characters array the ones we were looking for and pass them to father component.
+
+The father component will send it to MultipleCards (as explained before) and will display our searching results.
